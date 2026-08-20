@@ -1,12 +1,19 @@
 import dotenv from "dotenv";
-dotenv.config();
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const backendDir = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(backendDir, ".env") });
 
 import OpenAI from "openai";
 import { createApp } from "./app.js";
 
 const port = Number(process.env.PORT) || 5000;
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      maxRetries: 0,
+    })
   : null;
 
 if (!openai) {

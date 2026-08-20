@@ -42,6 +42,8 @@ frontend/   React + Vite app (port 5173)
 
 4. Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` requests to the Express server.
 
+A valid API key is not enough by itself. OpenAI returns HTTP 429 `insufficient_quota` when the account has no remaining credit. That is a **billing/quota** error, not a request-per-minute rate limit. Add payment and credits at [OpenAI billing](https://platform.openai.com/account/billing), then try again.
+
 ## API
 
 `GET /api/health` — service status and supported lengths.

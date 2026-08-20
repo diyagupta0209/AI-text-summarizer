@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { mapOpenAIError } from "./openaiErrors.js";
 import { buildSummarizePrompt, normalizeLength, SUMMARY_LENGTHS } from "./prompts.js";
 
 const MAX_TEXT_LENGTH = 15000;
@@ -80,26 +81,14 @@ export function createApp(openai) {
         length: selectedLength,
       });
     } catch (error) {
-      const status = error?.status || error?.statusCode;
-      const message =
-        error?.error?.message ||
-        error?.message ||
-        "Failed to generate summary. Please try again.";
-
-      if (status === 401 || status === 403) {
-        return res.status(502).json({
-          error: "OpenAI authentication failed. Check the API key.",
-        });
+      const mapped = mapOpenAIError(error);
+      if (mapped.status >= 500) {
+        console.error("Summarize error:", mapped.error);
       }
-
-      if (status === 429) {
-        return res.status(429).json({
-          error: "The summarization service is rate limited. Try again shortly.",
-        });
-      }
-
-      console.error("Summarize error:", message);
-      return res.status(500).json({ error: message });
+      return res.status(mapped.status).json({
+        error: mapped.error,
+        code: mapped.code,
+      });
     }
   });
 

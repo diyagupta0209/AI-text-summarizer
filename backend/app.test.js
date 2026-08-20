@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { after, before, describe, it } from "node:test";
 import { createApp } from "./app.js";
+import { mapOpenAIError } from "./openaiErrors.js";
 import { buildSummarizePrompt, normalizeLength } from "./prompts.js";
 
 function mockOpenAI(content = "This is a generated summary.") {
@@ -104,5 +105,47 @@ describe("summarize API", () => {
     const body = await response.json();
     assert.equal(body.summary, "This is a generated summary.");
     assert.equal(body.length, "short");
+  });
+
+  it("maps OpenAI quota errors instead of calling them rate limits", async () => {
+    const quotaClient = {
+      chat: {
+        completions: {
+          create: async () => {
+            const error = new Error("You exceeded your current quota");
+            error.status = 429;
+            error.code = "insufficient_quota";
+            error.type = "insufficient_quota";
+            throw error;
+          },
+        },
+      },
+    };
+    const quota = await listen(createApp(quotaClient));
+    try {
+      const response = await fetch(`${quota.baseUrl}/api/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: "Some source text.", length: "short" }),
+      });
+      assert.equal(response.status, 402);
+      const body = await response.json();
+      assert.equal(body.code, "insufficient_quota");
+      assert.match(body.error, /billing limit/i);
+    } finally {
+      await new Promise((resolve) => quota.server.close(resolve));
+    }
+  });
+});
+
+describe("OpenAI error mapping", () => {
+  it("keeps true rate limits as 429", () => {
+    const mapped = mapOpenAIError({
+      status: 429,
+      code: "rate_limit_exceeded",
+      message: "Rate limit reached",
+    });
+    assert.equal(mapped.status, 429);
+    assert.equal(mapped.code, "rate_limit_exceeded");
   });
 });
