@@ -1,90 +1,38 @@
-# AI Text Summarizer
+# TextGist
 
-Full-stack web app that turns long text into concise summaries using React, Express, and a free local summarizer. OpenAI remains an optional paid provider.
+Full-stack text summarization app: React UI plus an Express API. Summaries run in the browser for free. OpenAI is optional.
 
-## Features
-
-- Responsive React single-page UI with hooks and async API calls
-- REST API for validation, prompt construction, optional OpenAI requests, and error handling
-- Free extractive summarizer that works without billing
-- Customizable summary length: short, medium, or long
-- Copy-to-clipboard for generated summaries
-
-## Project structure
-
-```
-backend/   Express API (port 5000)
-frontend/   React + Vite app (port 5173)
-```
-
-## Setup
-
-The Generate button summarizes text **in the browser**. It does not call OpenAI and it does not require the Express server.
-
-On Windows / VS Code, from the project root:
+## Local setup
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\start.ps1
+git checkout main
+git pull origin main
+cd frontend
+npm install
+npm run dev
 ```
 
-1. Optional: create `backend/.env` if you want to change the provider or add a paid OpenAI key:
+Open http://localhost:5173.
 
-   ```bash
-   cp backend/.env.example backend/.env
-   ```
+## Deploy (GitHub Pages)
 
-   Keep `SUMMARIZER_PROVIDER=local` to avoid OpenAI charges.
+The live site is meant to be:
 
-2. You only need the frontend for free local summaries:
+**https://diyagupta0209.github.io/AI-text-summarizer/**
 
-   ```bash
-   cd frontend && npm install && npm run dev
-   ```
+Enable it once in the GitHub repo:
 
-   Open [http://localhost:5173](http://localhost:5173). Vite serves the UI and the summarizer API, so you do **not** need the backend running.
+1. Open **Settings → Pages**
+2. Under **Build and deployment → Source**, choose **GitHub Actions**
+3. Push to `main` (or open the **Actions** tab and run **Deploy TextGist**)
 
-   Optional Express API (port 5000):
+After the workflow is green, wait a minute and open the Pages URL. Hard-refresh if you still see an old page.
 
-   ```bash
-   cd backend && npm install && npm start
-   ```
+## Optional: one Node host (Render)
 
-```bash
-cd frontend && npm install && npm run build
-cd ../backend && npm start
-```
+`render.yaml` builds the React app and serves it from Express. Create a Web Service from this GitHub repo on [Render](https://render.com) if you want a single backend URL instead of Pages.
 
-Then open [http://localhost:5000](http://localhost:5000).
+## Optional OpenAI
 
-### Optional OpenAI
+Paid. Keep `SUMMARIZER_PROVIDER=local` unless you add billing and set `SUMMARIZER_PROVIDER=openai` with `OPENAI_API_KEY`.
 
-OpenAI chat completions are billed. A key without credits returns `insufficient_quota`. To use OpenAI after adding paid credit:
-
-```
-SUMMARIZER_PROVIDER=openai
-OPENAI_API_KEY=sk-...
-```
-
-`SUMMARIZER_PROVIDER=auto` is treated as local (free). OpenAI is used only when `SUMMARIZER_PROVIDER=openai`. If OpenAI fails (quota/rate limit), the API still returns a local summary instead of an error.
-
-## API
-
-`GET /api/health` — service status, active provider, and supported lengths.
-
-`POST /api/summarize`
-
-```json
-{
-  "text": "Long source text...",
-  "length": "short"
-}
-```
-
-`length` accepts `short`, `medium`, or `long`. Responses include `provider`: `local` or `openai`.
-
-## Tests
-
-```bash
-cd backend
-npm test
-```
