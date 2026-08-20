@@ -1,12 +1,13 @@
 services:
   - type: web
-    name: textgist
+    name: textgist-api
     runtime: node
     plan: free
-    buildCommand: npm --prefix frontend ci && npm --prefix frontend run build && npm --prefix backend ci
-    startCommand: npm --prefix backend start
+    buildCommand: npm ci --prefix backend
+    startCommand: npm start --prefix backend
+    healthCheckPath: /api/health
     envVars:
-      - key: SUMMARIZER_PROVIDER
-        value: local
       - key: NODE_ENV
         value: production
+      - key: SUMMARIZER_PROVIDER
+        value: local

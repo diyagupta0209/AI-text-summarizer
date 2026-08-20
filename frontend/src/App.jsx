@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { summarizeLocally } from "./localSummarizer.js";
+import { requestSummary } from "./api.js";
 import "./App.css";
 
 const LENGTHS = [
@@ -13,6 +13,7 @@ export default function App() {
   const [length, setLength] = useState("short");
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const wordCount = useMemo(() => {
     const words = text.trim().split(/\s+/).filter(Boolean);
@@ -25,22 +26,29 @@ export default function App() {
     setError("");
   }
 
-  function handleSummarize(event) {
+  async function handleSummarize(event) {
     event.preventDefault();
     setError("");
+    setSummary("");
 
     if (!text.trim()) {
       setError("Paste some text first.");
       return;
     }
 
-    const nextSummary = summarizeLocally(text, length);
-    if (!nextSummary) {
-      setError("Could not generate a summary from this text.");
-      return;
+    setIsLoading(true);
+    try {
+      const result = await requestSummary(text, length);
+      if (!result?.summary) {
+        setError("Could not generate a summary from this text.");
+        return;
+      }
+      setSummary(result.summary);
+    } catch (err) {
+      setError(err.message || "Could not generate a summary.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setSummary(nextSummary);
   }
 
   return (
@@ -86,8 +94,8 @@ export default function App() {
               <button type="button" className="clear" onClick={handleClear}>
                 Clear
               </button>
-              <button type="submit" className="generate" disabled={!text.trim()}>
-                Generate Summary
+              <button type="submit" className="generate" disabled={!text.trim() || isLoading}>
+                {isLoading ? "Generating..." : "Generate Summary"}
               </button>
             </div>
           </form>
