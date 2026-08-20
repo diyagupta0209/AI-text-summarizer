@@ -136,6 +136,15 @@ export function createApp(openai, options = {}) {
   app.post("/api/summarize", handleSummarize);
   app.post("/summarize", handleSummarize);
 
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api") || req.path === "/summarize") {
+      return res.status(404).json({
+        error: `No API route for ${req.method} ${req.path}`,
+      });
+    }
+    return next();
+  });
+
   const frontendDist =
     options.frontendDist ||
     path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "frontend", "dist");
@@ -159,6 +168,18 @@ export function createApp(openai, options = {}) {
       });
     });
   }
+
+  app.use((error, _req, res, next) => {
+    if (res.headersSent) {
+      return next(error);
+    }
+    if (error instanceof SyntaxError || error.type === "entity.parse.failed") {
+      return res.status(400).json({ error: "Request body must be valid JSON." });
+    }
+    return res.status(error.status || 500).json({
+      error: error.message || "Request error",
+    });
+  });
 
   return app;
 }

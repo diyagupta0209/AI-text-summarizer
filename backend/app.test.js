@@ -92,6 +92,24 @@ describe("summarize API", () => {
     assert.equal(response.status, 400);
   });
 
+  it("returns JSON for unknown API routes", async () => {
+    const response = await fetch(`${baseUrl}/api/missing`);
+    assert.equal(response.status, 404);
+    const body = await response.json();
+    assert.match(body.error, /No API route/);
+  });
+
+  it("returns JSON when the request body is invalid", async () => {
+    const response = await fetch(`${baseUrl}/api/summarize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{not-json",
+    });
+    assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.equal(body.error, "Request body must be valid JSON.");
+  });
+
   it("summarizes locally without OpenAI", async () => {
     const local = await listen(createApp(null, { provider: "local" }));
     try {
