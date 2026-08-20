@@ -46,7 +46,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>AI Text Summarizer</h1>
+        <h1>TextGist</h1>
         <p>Turn long text into clear, concise summaries.</p>
       </header>
 
