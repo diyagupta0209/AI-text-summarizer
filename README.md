@@ -1,6 +1,6 @@
 # TextGist
 
-Full-stack text summarization app: React UI plus an Express API. Summaries run in the browser for free. OpenAI is optional.
+React text summarization app. Summaries run in the browser. Express/OpenAI are optional.
 
 ## Local setup
 
@@ -14,25 +14,24 @@ npm run dev
 
 Open http://localhost:5173.
 
-## Deploy (GitHub Pages)
+## Deploy on Vercel (recommended)
 
-The live site is meant to be:
+1. Go to [https://vercel.com/new](https://vercel.com/new) and sign in with GitHub.
+2. Import **diyagupta0209/AI-text-summarizer**.
+3. Leave the root directory as the repository root. `vercel.json` already builds `frontend/`.
+4. Click **Deploy**. Do not add an OpenAI key.
 
-**https://diyagupta0209.github.io/AI-text-summarizer/**
+Your site will be something like `https://ai-text-summarizer.vercel.app`.
 
-Enable it once in the GitHub repo:
+## Deploy on Netlify
 
-1. Open **Settings → Pages**
-2. Under **Build and deployment → Source**, choose **GitHub Actions**
-3. Push to `main` (or open the **Actions** tab and run **Deploy TextGist**)
+1. Go to [https://app.netlify.com/start](https://app.netlify.com/start) and sign in with GitHub.
+2. Import **diyagupta0209/AI-text-summarizer**.
+3. Netlify will read `netlify.toml` (build `frontend`, publish `frontend/dist`).
+4. Click **Deploy**.
 
-After the workflow is green, wait a minute and open the Pages URL. Hard-refresh if you still see an old page.
+## GitHub Pages (optional)
 
-## Optional: one Node host (Render)
+Settings → Pages → Source → **GitHub Actions**, then run the **Deploy TextGist** workflow.
 
-`render.yaml` builds the React app and serves it from Express. Create a Web Service from this GitHub repo on [Render](https://render.com) if you want a single backend URL instead of Pages.
-
-## Optional OpenAI
-
-Paid. Keep `SUMMARIZER_PROVIDER=local` unless you add billing and set `SUMMARIZER_PROVIDER=openai` with `OPENAI_API_KEY`.
-
+https://diyagupta0209.github.io/AI-text-summarizer/
