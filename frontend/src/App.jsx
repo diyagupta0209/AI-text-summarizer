@@ -1,32 +1,38 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { summarizeLocally } from "./localSummarizer.js";
 import "./App.css";
 
 const LENGTHS = [
-  { id: "short", label: "Short", hint: "2–3 sentences" },
-  { id: "medium", label: "Medium", hint: "One paragraph" },
-  { id: "long", label: "Long", hint: "Detailed overview" },
+  { id: "short", label: "Short — 2-3 sentences" },
+  { id: "medium", label: "Medium — one paragraph" },
+  { id: "long", label: "Long — detailed overview" },
 ];
-
-const SAMPLE_TEXT = `Artificial intelligence has rapidly changed how people work with large amounts of information. Instead of reading every paragraph in a report, users can now request a concise overview that preserves the original meaning, names, figures, and conclusions. A good summarizer should stay faithful to the source, avoid inventing facts, and let the reader choose how long the result should be. This project demonstrates that workflow with a React frontend and an Express API that constructs prompts and calls the OpenAI API.`;
 
 export default function App() {
   const [text, setText] = useState("");
   const [length, setLength] = useState("short");
   const [summary, setSummary] = useState("");
-  const [provider, setProvider] = useState("");
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
 
-  const characterCount = text.length;
-  const canSubmit = text.trim().length > 0;
+  const wordCount = useMemo(() => {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    return words.length;
+  }, [text]);
+
+  function handleClear() {
+    setText("");
+    setSummary("");
+    setError("");
+  }
 
   function handleSummarize(event) {
     event.preventDefault();
     setError("");
-    setCopied(false);
-    setSummary("");
-    setProvider("");
+
+    if (!text.trim()) {
+      setError("Paste some text first.");
+      return;
+    }
 
     const nextSummary = summarizeLocally(text, length);
     if (!nextSummary) {
@@ -35,115 +41,62 @@ export default function App() {
     }
 
     setSummary(nextSummary);
-    setProvider("local");
-  }
-
-  async function copySummary() {
-    if (!summary) return;
-    await navigator.clipboard.writeText(summary);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
   }
 
   return (
-    <div className="page">
-      <header className="hero">
-        <p className="eyebrow">React · Express · Free local summarizer</p>
+    <div className="app">
+      <header className="topbar">
         <h1>AI Text Summarizer</h1>
-        <p className="lede">
-          Paste a long article, notes, or report and generate a concise summary
-          with a length you control. Summaries run on a free local engine. OpenAI
-          is turned off, so you will not see paid-API rate-limit errors.
-        </p>
+        <p>Turn long text into clear, concise summaries.</p>
       </header>
 
-      <main className="layout">
-        <form className="card" onSubmit={handleSummarize}>
-          <div className="card-head">
-            <h2>Source text</h2>
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => setText(SAMPLE_TEXT)}
+      <main className="panels">
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Input Text</h2>
+            <span>
+              {wordCount} words · {text.length} chars
+            </span>
+          </div>
+
+          <form onSubmit={handleSummarize}>
+            <textarea
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="Paste the text you want summarized..."
+              rows={14}
+            />
+
+            <label className="length-label" htmlFor="summary-length">
+              Summary length
+            </label>
+            <select
+              id="summary-length"
+              value={length}
+              onChange={(event) => setLength(event.target.value)}
             >
-              Load sample
-            </button>
-          </div>
-
-          <label className="sr-only" htmlFor="source-text">
-            Text to summarize
-          </label>
-          <textarea
-            id="source-text"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="Paste or type the text you want summarized..."
-            rows={12}
-          />
-
-          <div className="meta-row">
-            <span>{characterCount.toLocaleString()} characters</span>
-            <span>Max 15,000</span>
-          </div>
-
-          <fieldset className="lengths">
-            <legend>Summary length</legend>
-            <div className="length-grid">
               {LENGTHS.map((option) => (
-                <label
-                  key={option.id}
-                  className={length === option.id ? "chip selected" : "chip"}
-                >
-                  <input
-                    type="radio"
-                    name="length"
-                    value={option.id}
-                    checked={length === option.id}
-                    onChange={() => setLength(option.id)}
-                  />
-                  <strong>{option.label}</strong>
-                  <span>{option.hint}</span>
-                </label>
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
               ))}
+            </select>
+
+            <div className="actions">
+              <button type="button" className="clear" onClick={handleClear}>
+                Clear
+              </button>
+              <button type="submit" className="generate" disabled={!text.trim()}>
+                Generate Summary
+              </button>
             </div>
-          </fieldset>
+          </form>
+        </section>
 
-          <button className="primary" type="submit" disabled={!canSubmit}>
-            {isLoading ? "Generating summary..." : "Generate summary"}
-          </button>
-        </form>
-
-        <section className="card result" aria-live="polite">
-          <div className="card-head">
-            <h2>Summary</h2>
-            <button
-              type="button"
-              className="ghost"
-              onClick={copySummary}
-              disabled={!summary}
-            >
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-
+        <section className="panel">
+          <h2>Summary</h2>
           {error ? <p className="alert">{error}</p> : null}
-
-          {summary ? (
-            <>
-              {provider ? (
-                <p className="provider">
-                  {provider === "openai"
-                    ? "Generated with OpenAI"
-                    : "Generated with the free local summarizer"}
-                </p>
-              ) : null}
-              <p className="summary-text">{summary}</p>
-            </>
-          ) : (
-            <p className="placeholder">
-              Your generated summary will appear here after you submit text.
-            </p>
-          )}
+          <div className="output">{summary}</div>
         </section>
       </main>
     </div>
