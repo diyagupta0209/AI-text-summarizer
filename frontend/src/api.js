@@ -1,62 +1,23 @@
-function isRetryableError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  return (
-    error?.name === "TypeError" ||
-    error?.retryable === true ||
-    message.includes("failed to fetch") ||
-    message.includes("networkerror") ||
-    message.includes("load failed") ||
-    message.includes("unable to fetch") ||
-    message.includes("unexpected end of json") ||
-    message.includes("unexpected end of input")
-  );
-}
+import { summarizeLocally } from "./localSummarizer.js";
 
-function candidateBases() {
-  const configured = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-  const bases = [configured, ""];
-
-  if (typeof window !== "undefined" && window.location.protocol !== "https:") {
-    bases.push("http://127.0.0.1:5000");
-    bases.push("http://localhost:5000");
-  }
-
-  return [...new Set(bases.filter((base) => base !== undefined && base !== null))];
-}
-
-export async function parseApiBody(response) {
-  let raw = "";
-  try {
-    raw = await response.text();
-  } catch {
-    const error = new Error("The API returned an unreadable response.");
-    error.retryable = true;
-    throw error;
-  }
-
+async function parseApiBody(response) {
+  const raw = await response.text();
   if (!raw || !raw.trim()) {
-    const error = new Error("The API returned an empty response.");
-    error.retryable = true;
-    throw error;
+    return null;
   }
-
   try {
     return JSON.parse(raw);
   } catch {
-    const error = new Error(
-      "The API did not return JSON. Start the backend with `npm start` in the backend folder."
-    );
-    error.retryable = true;
-    throw error;
+    return null;
   }
 }
 
-export async function requestSummary(text, length) {
-  let lastRetryableError;
+async function tryRemoteSummary(text, length) {
+  const paths = ["/api/summarize", "/summarize"];
 
-  for (const base of candidateBases()) {
+  for (const path of paths) {
     try {
-      const response = await fetch(`${base}/api/summarize`, {
+      const response = await fetch(path, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -64,36 +25,27 @@ export async function requestSummary(text, length) {
         },
         body: JSON.stringify({ text, length }),
       });
-
       const data = await parseApiBody(response);
-
-      if (response.status === 404 || response.status === 502 || response.status === 504) {
-        lastRetryableError = new Error(data.error || "Summarizer API is unavailable.");
-        continue;
+      if (response.ok && data?.summary) {
+        return data;
       }
-
-      if (!response.ok) {
-        throw new Error(data.error || "Unable to generate a summary.");
-      }
-
-      if (!data.summary) {
-        lastRetryableError = new Error("The API returned an empty summary.");
-        continue;
-      }
-
-      return data;
-    } catch (error) {
-      if (isRetryableError(error)) {
-        lastRetryableError = error;
-        continue;
-      }
-      throw error;
+    } catch {
+      // Backend/proxy may be down; use the in-browser summarizer.
     }
   }
 
-  throw new Error(
-    lastRetryableError
-      ? "Unable to reach the summarizer API. Start the backend with `npm start` in the backend folder, keep it running, then generate again."
-      : "Unable to generate a summary."
-  );
+  return null;
+}
+
+export async function requestSummary(text, length) {
+  const remote = await tryRemoteSummary(text, length);
+  if (remote?.summary) {
+    return remote;
+  }
+
+  return {
+    summary: summarizeLocally(text, length),
+    length,
+    provider: "local",
+  };
 }

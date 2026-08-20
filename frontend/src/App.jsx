@@ -36,9 +36,7 @@ export default function App() {
     try {
       const data = await requestSummary(text, length);
       if (!data?.summary) {
-        throw new Error(
-          "The API returned an empty summary. Start the backend with npm start in the backend folder."
-        );
+        throw new Error("Could not generate a summary from this text.");
       }
       setSummary(data.summary);
       setProvider(data.provider || "");
