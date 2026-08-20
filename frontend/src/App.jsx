@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { requestSummary } from "./api.js";
+import { useState } from "react";
+import { summarizeLocally } from "./localSummarizer.js";
 import "./App.css";
 
 const LENGTHS = [
@@ -16,35 +16,26 @@ export default function App() {
   const [summary, setSummary] = useState("");
   const [provider, setProvider] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const characterCount = text.length;
-  const canSubmit = useMemo(
-    () => text.trim().length > 0 && !isLoading,
-    [text, isLoading]
-  );
+  const canSubmit = text.trim().length > 0;
 
-  async function handleSummarize(event) {
+  function handleSummarize(event) {
     event.preventDefault();
     setError("");
     setCopied(false);
-    setIsLoading(true);
     setSummary("");
     setProvider("");
 
-    try {
-      const data = await requestSummary(text, length);
-      if (!data?.summary) {
-        throw new Error("Could not generate a summary from this text.");
-      }
-      setSummary(data.summary);
-      setProvider(data.provider || "");
-    } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
-    } finally {
-      setIsLoading(false);
+    const nextSummary = summarizeLocally(text, length);
+    if (!nextSummary) {
+      setError("Could not generate a summary from this text.");
+      return;
     }
+
+    setSummary(nextSummary);
+    setProvider("local");
   }
 
   async function copySummary() {
@@ -137,9 +128,7 @@ export default function App() {
 
           {error ? <p className="alert">{error}</p> : null}
 
-          {isLoading ? (
-            <p className="placeholder">Generating summary...</p>
-          ) : summary ? (
+          {summary ? (
             <>
               {provider ? (
                 <p className="provider">

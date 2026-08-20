@@ -19,7 +19,7 @@ frontend/   React + Vite app (port 5173)
 
 ## Setup
 
-OpenAI is **not required**. The default provider is local and free.
+The Generate button summarizes text **in the browser**. It does not call OpenAI and it does not require the Express server.
 
 1. Optional: create `backend/.env` if you want to change the provider or add a paid OpenAI key:
 
