@@ -1,46 +1,31 @@
 import dotenv from "dotenv";
-dotenv.config();
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import express from "express";
-import cors from "cors";
+const backendDir = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(backendDir, ".env") });
+
 import OpenAI from "openai";
+import { createApp } from "./app.js";
 
-console.log("API KEY:", process.env.OPENAI_API_KEY);
+const port = Number(process.env.PORT) || 5000;
+const requestedProvider = String(process.env.SUMMARIZER_PROVIDER || "local").toLowerCase();
+const openai =
+  requestedProvider === "openai" && process.env.OPENAI_API_KEY
+    ? new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        maxRetries: 0,
+      })
+    : null;
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+if (requestedProvider === "openai" && !openai) {
+  console.warn("SUMMARIZER_PROVIDER=openai but no OPENAI_API_KEY; using the free local summarizer.");
+} else if (!openai) {
+  console.log("Using the free local summarizer (OpenAI disabled).");
+}
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const app = createApp(openai);
+
+app.listen(port, "0.0.0.0", () => {
+  console.log(`AI Text Summarizer API listening on http://127.0.0.1:${port}`);
 });
-
-// Test route
-app.get("/", (req, res) => {
-  res.send("Backend is running successfully");
-});
-
-// Summarize route
-app.post("/summarize", async (req, res) => {
-  console.log("🔥 HIT /summarize");
-  console.log("BODY:", req.body);
-
-  try {
-    const { text, length } = req.body;
-
-    if (!text || text.trim() === "") {
-      return res.status(400).json({ error: "Text is required" });
-    }
-
-    const prompt = `Summarize the following text in a ${length || "short"} way:\n\n${text}`;
-
-    console.log("⏳ Calling OpenAI...");
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    console.log("✅ OpenAI responded");
-
-    const summary = response.choices[0].
