@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: textgist
+    runtime: node
+    plan: free
+    buildCommand: npm --prefix frontend ci && npm --prefix frontend run build && npm --prefix backend ci
+    startCommand: npm --prefix backend start
+    envVars:
+      - key: SUMMARIZER_PROVIDER
+        value: local
+      - key: NODE_ENV
+        value: production
