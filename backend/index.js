@@ -5,9 +5,13 @@ import OpenAI from "openai";
 import { createApp } from "./app.js";
 
 const port = Number(process.env.PORT) || 5000;
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+if (!openai) {
+  console.warn("OPENAI_API_KEY is not set. The API will start, but /api/summarize will return 503.");
+}
 
 const app = createApp(openai);
 

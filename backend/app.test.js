@@ -77,6 +77,20 @@ describe("summarize API", () => {
     assert.equal(response.status, 400);
   });
 
+  it("returns 503 when OpenAI is not configured", async () => {
+    const unconfigured = await listen(createApp(null));
+    try {
+      const response = await fetch(`${unconfigured.baseUrl}/api/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: "Some source text.", length: "short" }),
+      });
+      assert.equal(response.status, 503);
+    } finally {
+      await new Promise((resolve) => unconfigured.server.close(resolve));
+    }
+  });
+
   it("returns a summary for valid input", async () => {
     const response = await fetch(`${baseUrl}/api/summarize`, {
       method: "POST",

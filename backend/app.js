@@ -45,7 +45,7 @@ export function createApp(openai) {
         });
       }
 
-      if (!process.env.OPENAI_API_KEY && !openai) {
+      if (!openai) {
         return res.status(503).json({
           error: "OpenAI API key is not configured on the server.",
         });
