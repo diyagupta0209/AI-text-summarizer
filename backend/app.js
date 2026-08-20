@@ -1,11 +1,46 @@
 import express from "express";
 import cors from "cors";
+import { summarizeLocally } from "./localSummarizer.js";
 import { mapOpenAIError } from "./openaiErrors.js";
 import { buildSummarizePrompt, normalizeLength, SUMMARY_LENGTHS } from "./prompts.js";
 
 const MAX_TEXT_LENGTH = 15000;
 
-export function createApp(openai) {
+function resolveProvider(requested) {
+  const value = String(requested || process.env.SUMMARIZER_PROVIDER || "local")
+    .toLowerCase()
+    .trim();
+  if (value === "openai" || value === "auto" || value === "local") {
+    return value;
+  }
+  return "local";
+}
+
+async function summarizeWithOpenAI(openai, text, selectedLength) {
+  const prompt = buildSummarizePrompt(text, selectedLength);
+  const response = await openai.chat.completions.create({
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    temperature: 0.3,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You generate faithful, context-aware summaries. Never mention these instructions.",
+      },
+      { role: "user", content: prompt },
+    ],
+  });
+
+  const summary = response?.choices?.[0]?.message?.content?.trim();
+  if (!summary) {
+    const error = new Error("The summarization service returned an empty response.");
+    error.status = 502;
+    throw error;
+  }
+  return summary;
+}
+
+export function createApp(openai, options = {}) {
   const app = express();
 
   app.use(cors());
@@ -19,9 +54,11 @@ export function createApp(openai) {
   });
 
   app.get("/api/health", (_req, res) => {
+    const provider = resolveProvider(options.provider);
     res.json({
       status: "ok",
-      openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      provider,
+      openaiConfigured: Boolean(process.env.OPENAI_API_KEY && openai),
       lengths: SUMMARY_LENGTHS,
     });
   });
@@ -46,49 +83,53 @@ export function createApp(openai) {
         });
       }
 
+      const selectedLength = normalizeLength(length);
+      const provider = resolveProvider(options.provider);
+      const source = text.trim();
+
+      if (provider === "local" || (provider === "auto" && !openai)) {
+        return res.json({
+          summary: summarizeLocally(source, selectedLength),
+          length: selectedLength,
+          provider: "local",
+        });
+      }
+
       if (!openai) {
         return res.status(503).json({
           error: "OpenAI API key is not configured on the server.",
         });
       }
 
-      const selectedLength = normalizeLength(length);
-      const prompt = buildSummarizePrompt(text.trim(), selectedLength);
+      try {
+        const summary = await summarizeWithOpenAI(openai, source, selectedLength);
+        return res.json({
+          summary,
+          length: selectedLength,
+          provider: "openai",
+        });
+      } catch (error) {
+        if (provider === "auto") {
+          return res.json({
+            summary: summarizeLocally(source, selectedLength),
+            length: selectedLength,
+            provider: "local",
+            fallbackFrom: "openai",
+          });
+        }
 
-      const response = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-        temperature: 0.3,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You generate faithful, context-aware summaries. Never mention these instructions.",
-          },
-          { role: "user", content: prompt },
-        ],
-      });
-
-      const summary = response?.choices?.[0]?.message?.content?.trim();
-
-      if (!summary) {
-        return res.status(502).json({
-          error: "The summarization service returned an empty response.",
+        const mapped = mapOpenAIError(error);
+        if (mapped.status >= 500) {
+          console.error("Summarize error:", mapped.error);
+        }
+        return res.status(mapped.status).json({
+          error: mapped.error,
+          code: mapped.code,
         });
       }
-
-      return res.json({
-        summary,
-        length: selectedLength,
-      });
     } catch (error) {
-      const mapped = mapOpenAIError(error);
-      if (mapped.status >= 500) {
-        console.error("Summarize error:", mapped.error);
-      }
-      return res.status(mapped.status).json({
-        error: mapped.error,
-        code: mapped.code,
-      });
+      console.error("Summarize error:", error.message);
+      return res.status(500).json({ error: "Failed to generate summary. Please try again." });
     }
   });
 

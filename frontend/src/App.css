@@ -167,6 +167,13 @@ textarea:focus {
   min-height: 420px;
 }
 
+.provider {
+  margin: 0 0 10px;
+  color: var(--ok);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
 .summary-text {
   margin: 0;
   line-height: 1.7;

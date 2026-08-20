@@ -13,6 +13,7 @@ export default function App() {
   const [text, setText] = useState("");
   const [length, setLength] = useState("short");
   const [summary, setSummary] = useState("");
+  const [provider, setProvider] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -29,6 +30,7 @@ export default function App() {
     setCopied(false);
     setIsLoading(true);
     setSummary("");
+    setProvider("");
 
     try {
       const response = await fetch("/api/summarize", {
@@ -44,6 +46,7 @@ export default function App() {
       }
 
       setSummary(data.summary);
+      setProvider(data.provider || "");
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -61,11 +64,12 @@ export default function App() {
   return (
     <div className="page">
       <header className="hero">
-        <p className="eyebrow">React · Express · OpenAI</p>
+        <p className="eyebrow">React · Express · Free local summarizer</p>
         <h1>AI Text Summarizer</h1>
         <p className="lede">
-          Paste a long article, notes, or report and generate a context-aware
-          summary with a length you control.
+          Paste a long article, notes, or report and generate a concise summary
+          with a length you control. The app runs locally at no cost. OpenAI is
+          optional and requires paid credits.
         </p>
       </header>
 
@@ -141,9 +145,18 @@ export default function App() {
           {error ? <p className="alert">{error}</p> : null}
 
           {isLoading ? (
-            <p className="placeholder">Calling the summarization API...</p>
+            <p className="placeholder">Generating summary...</p>
           ) : summary ? (
-            <p className="summary-text">{summary}</p>
+            <>
+              {provider ? (
+                <p className="provider">
+                  {provider === "openai"
+                    ? "Generated with OpenAI"
+                    : "Generated with the free local summarizer"}
+                </p>
+              ) : null}
+              <p className="summary-text">{summary}</p>
+            </>
           ) : (
             <p className="placeholder">
               Your generated summary will appear here after you submit text.

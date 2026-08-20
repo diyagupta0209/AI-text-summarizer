@@ -1,11 +1,12 @@
 # AI Text Summarizer
 
-Full-stack web app that turns long text into concise, context-aware summaries using React, Express, and the OpenAI API.
+Full-stack web app that turns long text into concise summaries using React, Express, and a free local summarizer. OpenAI remains an optional paid provider.
 
 ## Features
 
 - Responsive React single-page UI with hooks and async API calls
-- REST API for validation, prompt construction, OpenAI requests, and error handling
+- REST API for validation, prompt construction, optional OpenAI requests, and error handling
+- Free extractive summarizer that works without billing
 - Customizable summary length: short, medium, or long
 - Copy-to-clipboard for generated summaries
 
@@ -18,11 +19,15 @@ frontend/   React + Vite app (port 5173)
 
 ## Setup
 
-1. Create `backend/.env` from the example file and add your OpenAI key:
+OpenAI is **not required**. The default provider is local and free.
+
+1. Optional: create `backend/.env` if you want to change the provider or add a paid OpenAI key:
 
    ```bash
    cp backend/.env.example backend/.env
    ```
+
+   Keep `SUMMARIZER_PROVIDER=local` to avoid OpenAI charges.
 
 2. Install and start the API:
 
@@ -42,11 +47,20 @@ frontend/   React + Vite app (port 5173)
 
 4. Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` requests to the Express server.
 
-A valid API key is not enough by itself. OpenAI returns HTTP 429 `insufficient_quota` when the account has no remaining credit. That is a **billing/quota** error, not a request-per-minute rate limit. Add payment and credits at [OpenAI billing](https://platform.openai.com/account/billing), then try again.
+### Optional OpenAI
+
+OpenAI chat completions are billed. A key without credits returns `insufficient_quota`. To use OpenAI after adding paid credit:
+
+```
+SUMMARIZER_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+```
+
+`SUMMARIZER_PROVIDER=auto` tries OpenAI first and falls back to the free local summarizer if OpenAI fails.
 
 ## API
 
-`GET /api/health` — service status and supported lengths.
+`GET /api/health` — service status, active provider, and supported lengths.
 
 `POST /api/summarize`
 
@@ -57,7 +71,7 @@ A valid API key is not enough by itself. OpenAI returns HTTP 429 `insufficient_q
 }
 ```
 
-`length` accepts `short`, `medium`, or `long`.
+`length` accepts `short`, `medium`, or `long`. Responses include `provider`: `local` or `openai`.
 
 ## Tests
 
