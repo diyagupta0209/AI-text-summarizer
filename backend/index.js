@@ -9,15 +9,19 @@ import OpenAI from "openai";
 import { createApp } from "./app.js";
 
 const port = Number(process.env.PORT) || 5000;
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      maxRetries: 0,
-    })
-  : null;
+const requestedProvider = String(process.env.SUMMARIZER_PROVIDER || "local").toLowerCase();
+const openai =
+  requestedProvider === "openai" && process.env.OPENAI_API_KEY
+    ? new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        maxRetries: 0,
+      })
+    : null;
 
-if (!openai) {
-  console.log("OPENAI_API_KEY is not set. Using the free local summarizer.");
+if (requestedProvider === "openai" && !openai) {
+  console.warn("SUMMARIZER_PROVIDER=openai but no OPENAI_API_KEY; using the free local summarizer.");
+} else if (!openai) {
+  console.log("Using the free local summarizer (OpenAI disabled).");
 }
 
 const app = createApp(openai);

@@ -65,7 +65,7 @@ SUMMARIZER_PROVIDER=openai
 OPENAI_API_KEY=sk-...
 ```
 
-`SUMMARIZER_PROVIDER=auto` tries OpenAI first and falls back to the free local summarizer if OpenAI fails.
+`SUMMARIZER_PROVIDER=auto` is treated as local (free). OpenAI is used only when `SUMMARIZER_PROVIDER=openai`. If OpenAI fails (quota/rate limit), the API still returns a local summary instead of an error.
 
 ## API
 

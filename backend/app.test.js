@@ -153,21 +153,8 @@ describe("summarize API", () => {
     assert.equal(response.status, 200);
   });
 
-  it("falls back to local summaries when OpenAI quota is exhausted", async () => {
-    const quotaClient = {
-      chat: {
-        completions: {
-          create: async () => {
-            const error = new Error("You exceeded your current quota");
-            error.status = 429;
-            error.code = "insufficient_quota";
-            error.type = "insufficient_quota";
-            throw error;
-          },
-        },
-      },
-    };
-    const quota = await listen(createApp(quotaClient, { provider: "auto" }));
+  it("uses the free local summarizer when provider is auto", async () => {
+    const quota = await listen(createApp(mockOpenAI(), { provider: "auto" }));
     try {
       const response = await fetch(`${quota.baseUrl}/api/summarize`, {
         method: "POST",
@@ -177,13 +164,13 @@ describe("summarize API", () => {
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.equal(body.provider, "local");
-      assert.equal(body.fallbackFrom, "openai");
+      assert.ok(body.summary);
     } finally {
       await new Promise((resolve) => quota.server.close(resolve));
     }
   });
 
-  it("maps OpenAI quota errors when OpenAI is required", async () => {
+  it("falls back to local summaries when OpenAI returns a quota error", async () => {
     const quotaClient = {
       chat: {
         completions: {
@@ -202,12 +189,13 @@ describe("summarize API", () => {
       const response = await fetch(`${quota.baseUrl}/api/summarize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: "Some source text.", length: "short" }),
+        body: JSON.stringify({ text: SAMPLE, length: "short" }),
       });
-      assert.equal(response.status, 402);
+      assert.equal(response.status, 200);
       const body = await response.json();
-      assert.equal(body.code, "insufficient_quota");
-      assert.match(body.error, /billing limit/i);
+      assert.equal(body.provider, "local");
+      assert.equal(body.fallbackFrom, "openai");
+      assert.ok(body.summary);
     } finally {
       await new Promise((resolve) => quota.server.close(resolve));
     }

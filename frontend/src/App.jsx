@@ -63,8 +63,8 @@ export default function App() {
         <h1>AI Text Summarizer</h1>
         <p className="lede">
           Paste a long article, notes, or report and generate a concise summary
-          with a length you control. The app runs locally at no cost. OpenAI is
-          optional and requires paid credits.
+          with a length you control. Summaries run on a free local engine. OpenAI
+          is turned off, so you will not see paid-API rate-limit errors.
         </p>
       </header>
 

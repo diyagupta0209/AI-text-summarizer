@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import { summarizeLocally } from "./localSummarizer.js";
-import { mapOpenAIError } from "./openaiErrors.js";
 import { buildSummarizePrompt, normalizeLength, SUMMARY_LENGTHS } from "./prompts.js";
 
 const MAX_TEXT_LENGTH = 15000;
@@ -86,18 +85,21 @@ export function createApp(openai, options = {}) {
       const selectedLength = normalizeLength(length);
       const provider = resolveProvider(options.provider);
       const source = text.trim();
+      const localResult = {
+        summary: summarizeLocally(source, selectedLength),
+        length: selectedLength,
+        provider: "local",
+      };
 
-      if (provider === "local" || (provider === "auto" && !openai)) {
-        return res.json({
-          summary: summarizeLocally(source, selectedLength),
-          length: selectedLength,
-          provider: "local",
-        });
+      // OpenAI is paid. Use it only when explicitly requested; otherwise stay local.
+      if (provider !== "openai") {
+        return res.json(localResult);
       }
 
       if (!openai) {
-        return res.status(503).json({
-          error: "OpenAI API key is not configured on the server.",
+        return res.json({
+          ...localResult,
+          fallbackFrom: "openai-unconfigured",
         });
       }
 
@@ -109,22 +111,10 @@ export function createApp(openai, options = {}) {
           provider: "openai",
         });
       } catch (error) {
-        if (provider === "auto") {
-          return res.json({
-            summary: summarizeLocally(source, selectedLength),
-            length: selectedLength,
-            provider: "local",
-            fallbackFrom: "openai",
-          });
-        }
-
-        const mapped = mapOpenAIError(error);
-        if (mapped.status >= 500) {
-          console.error("Summarize error:", mapped.error);
-        }
-        return res.status(mapped.status).json({
-          error: mapped.error,
-          code: mapped.code,
+        console.warn("OpenAI summarization failed; using free local summarizer.", error.code || error.message);
+        return res.json({
+          ...localResult,
+          fallbackFrom: "openai",
         });
       }
     } catch (error) {
