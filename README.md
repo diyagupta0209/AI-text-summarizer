@@ -29,23 +29,32 @@ OpenAI is **not required**. The default provider is local and free.
 
    Keep `SUMMARIZER_PROVIDER=local` to avoid OpenAI charges.
 
-2. Install and start the API:
+2. Install dependencies and start both servers from the project root:
 
    ```bash
-   cd backend
-   npm install
-   npm start
-   ```
-
-3. In a second terminal, install and start the UI:
-
-   ```bash
-   cd frontend
-   npm install
+   cd backend && npm install && cd ../frontend && npm install && cd ..
    npm run dev
    ```
 
-4. Open [http://localhost:5173](http://localhost:5173). Vite proxies `/api` requests to the Express server.
+   Or start them separately:
+
+   ```bash
+   cd backend && npm install && npm start
+   cd frontend && npm install && npm run dev
+   ```
+
+   The backend must be running on port 5000. If it is not, the browser shows “Failed to fetch” / unable to reach the API.
+
+3. Open [http://localhost:5173](http://localhost:5173). The UI calls `/api/summarize` and falls back to `http://127.0.0.1:5000` if the Vite proxy is not used.
+
+You can also build the UI and use one server:
+
+```bash
+cd frontend && npm install && npm run build
+cd ../backend && npm start
+```
+
+Then open [http://localhost:5000](http://localhost:5000).
 
 ### Optional OpenAI
 

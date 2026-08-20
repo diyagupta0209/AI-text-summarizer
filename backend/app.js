@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import { summarizeLocally } from "./localSummarizer.js";
@@ -43,15 +46,12 @@ async function summarizeWithOpenAI(openai, text, selectedLength) {
 export function createApp(openai, options = {}) {
   const app = express();
 
-  app.use(cors());
+  app.use(
+    cors({
+      origin: true,
+    })
+  );
   app.use(express.json({ limit: "1mb" }));
-
-  app.get("/", (_req, res) => {
-    res.json({
-      status: "ok",
-      message: "AI Text Summarizer API is running",
-    });
-  });
 
   app.get("/api/health", (_req, res) => {
     const provider = resolveProvider(options.provider);
@@ -63,7 +63,7 @@ export function createApp(openai, options = {}) {
     });
   });
 
-  app.post("/api/summarize", async (req, res) => {
+  async function handleSummarize(req, res) {
     try {
       const { text, length } = req.body || {};
 
@@ -131,7 +131,34 @@ export function createApp(openai, options = {}) {
       console.error("Summarize error:", error.message);
       return res.status(500).json({ error: "Failed to generate summary. Please try again." });
     }
-  });
+  }
+
+  app.post("/api/summarize", handleSummarize);
+  app.post("/summarize", handleSummarize);
+
+  const frontendDist =
+    options.frontendDist ||
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "frontend", "dist");
+
+  if (fs.existsSync(path.join(frontendDist, "index.html"))) {
+    app.use(express.static(frontendDist));
+    app.use((req, res, next) => {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        return next();
+      }
+      if (req.path.startsWith("/api")) {
+        return next();
+      }
+      return res.sendFile(path.join(frontendDist, "index.html"));
+    });
+  } else {
+    app.get("/", (_req, res) => {
+      res.json({
+        status: "ok",
+        message: "AI Text Summarizer API is running",
+      });
+    });
+  }
 
   return app;
 }

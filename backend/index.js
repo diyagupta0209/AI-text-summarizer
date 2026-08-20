@@ -17,11 +17,11 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 if (!openai) {
-  console.warn("OPENAI_API_KEY is not set. The API will start, but /api/summarize will return 503.");
+  console.log("OPENAI_API_KEY is not set. Using the free local summarizer.");
 }
 
 const app = createApp(openai);
 
-app.listen(port, () => {
-  console.log(`AI Text Summarizer API listening on http://localhost:${port}`);
+app.listen(port, "0.0.0.0", () => {
+  console.log(`AI Text Summarizer API listening on http://127.0.0.1:${port}`);
 });

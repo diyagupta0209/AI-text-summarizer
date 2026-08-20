@@ -126,6 +126,15 @@ describe("summarize API", () => {
     assert.equal(body.provider, "openai");
   });
 
+  it("also accepts POST /summarize", async () => {
+    const response = await fetch(`${baseUrl}/summarize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: SAMPLE, length: "short" }),
+    });
+    assert.equal(response.status, 200);
+  });
+
   it("falls back to local summaries when OpenAI quota is exhausted", async () => {
     const quotaClient = {
       chat: {
