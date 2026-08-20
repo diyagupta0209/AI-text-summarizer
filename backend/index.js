@@ -1,46 +1,16 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import express from "express";
-import cors from "cors";
 import OpenAI from "openai";
+import { createApp } from "./app.js";
 
-console.log("API KEY:", process.env.OPENAI_API_KEY);
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
+const port = Number(process.env.PORT) || 5000;
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Test route
-app.get("/", (req, res) => {
-  res.send("Backend is running successfully");
+const app = createApp(openai);
+
+app.listen(port, () => {
+  console.log(`AI Text Summarizer API listening on http://localhost:${port}`);
 });
-
-// Summarize route
-app.post("/summarize", async (req, res) => {
-  console.log("🔥 HIT /summarize");
-  console.log("BODY:", req.body);
-
-  try {
-    const { text, length } = req.body;
-
-    if (!text || text.trim() === "") {
-      return res.status(400).json({ error: "Text is required" });
-    }
-
-    const prompt = `Summarize the following text in a ${length || "short"} way:\n\n${text}`;
-
-    console.log("⏳ Calling OpenAI...");
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    console.log("✅ OpenAI responded");
-
-    const summary = response.choices[0].
