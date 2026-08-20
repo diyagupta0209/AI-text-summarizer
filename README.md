@@ -21,6 +21,12 @@ frontend/   React + Vite app (port 5173)
 
 The Generate button summarizes text **in the browser**. It does not call OpenAI and it does not require the Express server.
 
+On Windows / VS Code, from the project root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1
+```
+
 1. Optional: create `backend/.env` if you want to change the provider or add a paid OpenAI key:
 
    ```bash
