@@ -1,12 +1,11 @@
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import OpenAI from "openai";
+import { createApp } from "./app.js";
 
 const backendDir = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(backendDir, ".env") });
-
-import OpenAI from "openai";
-import { createApp } from "./app.js";
 
 const port = Number(process.env.PORT) || 5000;
 const requestedProvider = String(process.env.SUMMARIZER_PROVIDER || "local").toLowerCase();
@@ -27,5 +26,5 @@ if (requestedProvider === "openai" && !openai) {
 const app = createApp(openai);
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`AI Text Summarizer API listening on http://127.0.0.1:${port}`);
+  console.log(`TextGist API listening on http://127.0.0.1:${port}`);
 });
